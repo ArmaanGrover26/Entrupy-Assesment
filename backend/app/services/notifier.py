@@ -10,6 +10,7 @@ from sqlalchemy import select
 
 from app.db.models import Webhook, PriceEvent
 
+"""notifications"""
 
 async def deliver_price_event(db: AsyncSession, event: PriceEvent) -> None:
     """
