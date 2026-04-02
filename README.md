@@ -1,222 +1,157 @@
 # Product Price Monitoring System
-### Entrupy Engineering — Intern Assignment
+### Entrupy Engineering � Intern Assignment
 
-A full-stack system that collects product data from luxury marketplaces (Grailed, Fashionphile, 1stdibs), tracks price changes in real time, serves a REST API, notifies on price changes, and displays a live dashboard.
+A complete full-stack implementation for tracking luxury marketplace listings, detecting price changes, and displaying live analytics.
 
----
+## What is included
+
+- Backend REST API with FastAPI
+- JWT authentication and token-based sessions
+- PostgreSQL data storage with async SQLAlchemy
+- Marketplace adapters for Grailed, Fashionphile, and 1stdibs
+- Product listing, detail, price history, and analytics endpoints
+- Background webhook notification support
+- React frontend with Vite, React Router, and React Query
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Backend | FastAPI (Python 3.9+) |
+| Backend | FastAPI, Python 3.9+ |
 | Database | PostgreSQL 17 |
-| Migrations | Alembic (code-first, no manual SQL) |
-| Frontend | React + Vite |
-| Auth | JWT (python-jose + passlib) |
-| HTTP Client | httpx (async) |
-| Notifications | Event log + BackgroundTask webhooks |
-
----
+| ORM | SQLAlchemy Async |
+| Auth | JWT via python-jose + passlib |
+| HTTP client | httpx (async) |
+| Background tasks | FastAPI BackgroundTasks + tenacity |
+| Frontend | React 19, Vite, React Router, React Query |
 
 ## Project Structure
 
 ```
 Entrupy-Assignment/
-├── backend/
-│   ├── app/
-│   │   ├── api/          # Route handlers (auth, products, analytics, events)
-│   │   ├── core/         # Config, security, middleware
-│   │   ├── db/           # SQLAlchemy models, session, Alembic
-│   │   ├── scrapers/     # Marketplace adapters (Grailed, Fashionphile, 1stdibs)
-│   │   └── services/     # Price detection, webhook notifier
-│   ├── tests/            # 8+ pytest tests
-│   ├── alembic/          # Migration files (version-controlled)
-│   ├── requirements.txt
-│   └── .env              # Local secrets (not committed)
-├── frontend/
-│   ├── src/
-│   │   ├── pages/        # Dashboard, ProductList, ProductDetail
-│   │   ├── components/   # Reusable UI components
-│   │   └── hooks/        # React Query hooks
-│   └── package.json
-├── README.md
-└── .gitignore
++-- backend/
+�   +-- app/
+�   �   +-- api/          # API routes: auth, products, analytics, refresh, events
+�   �   +-- core/         # Config, security, middleware
+�   �   +-- db/           # Models, session, migrations, seeding
+�   �   +-- scrapers/     # Marketplace adapters and registry
+�   �   +-- services/     # Price detection and webhook notifier
+�   +-- tests/            # Pytest coverage for auth and API behavior
+�   +-- requirements.txt
+�   +-- .env.example      # Local runtime env vars
++-- frontend/
+�   +-- src/
+�   �   +-- pages/        # Login, Register, Dashboard, Products, ProductDetail, Analytics
+�   �   +-- components/   # Navigation, ProtectedRoute
+�   �   +-- api/          # HTTP client and auth helper
+�   +-- package.json
+�   +-- vite.config.js
++-- README.md
++-- .gitignore
 ```
-
----
 
 ## How to Run
 
 ### Prerequisites
-- Python 3.9+
-- PostgreSQL 17 (running locally)
-- Node.js 18+
+- Python 3.9+ installed
+- PostgreSQL 17 running locally
+- Node.js 18+ installed
 
-### 1. Clone the repo
-```bash
-git clone https://github.com/ArmaanGrover26/Entrupy-Assignment.git
-cd Entrupy-Assignment
-```
+### Backend Setup
 
-### 2. Backend Setup
 ```bash
 cd backend
-
-# Create and activate virtual environment
 python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # Mac/Linux
-
-# Install dependencies
+venv\Scripts\activate
 pip install -r requirements.txt
-
-# Set up environment variables
 copy .env.example .env
-# Edit .env with your PostgreSQL credentials
-
-# Run migrations (creates all tables automatically)
+# edit backend/.env to set DATABASE_URL and SECRET_KEY
 alembic upgrade head
-
-# Seed sample data
 python -m app.db.seed
-
-# Start the API server (port 8000)
 uvicorn app.main:app --reload
 ```
 
-API docs available at: **http://localhost:8000/docs**
+Open API docs at **http://localhost:8000/docs**
 
-### 3. Frontend Setup
+### Frontend Setup
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Dashboard available at: **http://localhost:5173**
+Open the dashboard at **http://localhost:5173**
 
----
+## Environment variables
 
-## API Documentation
+Create `backend/.env` from `.env.example` and set:
 
-All protected endpoints require a JWT Bearer token.
+- `DATABASE_URL` e.g. `postgresql+asyncpg://postgres:abcde@localhost:5432/price_monitor`
+- `SECRET_KEY`
+- `ALGORITHM`
+- `ACCESS_TOKEN_EXPIRE_MINUTES`
+- `DEBUG`
+- `APP_NAME`
+
+## Main API Endpoints
 
 ### Authentication
-```
-POST /auth/register
-Body: { "email": "user@example.com", "password": "secret" }
 
-POST /auth/token
-Body: { "username": "user@example.com", "password": "secret" }
-Response: { "access_token": "...", "token_type": "bearer" }
-```
+- `POST /auth/register`
+  - Body: `{ "email": "user@example.com", "password": "secret" }`
+- `POST /auth/token`
+  - Body: `username` and `password` as form data
+  - Response: `{ "access_token": "...", "token_type": "bearer" }`
 
 ### Products
-```
-GET /products
-Query params: source, category, price_min, price_max, page, limit
-Response: { "items": [...], "total": 120, "page": 1 }
 
-GET /products/{id}
-Response: { product details + current listing info }
-
-GET /products/{id}/history
-Response: { "history": [{ "price": 450.00, "recorded_at": "..." }] }
-```
-
-### Data Refresh
-```
-POST /refresh
-Body: { "source": "grailed" }   # or omit for all sources
-Response: { "message": "Refresh triggered", "products_updated": 12 }
-```
+- `GET /products`
+- `GET /products/{id}`
+- `GET /products/{id}/history`
 
 ### Analytics
-```
-GET /analytics/summary
-Response: {
-  "totals_by_source": { "grailed": 45, "fashionphile": 38, "1stdibs": 27 },
-  "avg_price_by_category": { "bags": 1250.00, "shoes": 480.00 },
-  "recent_price_changes": 7,
-  "last_refresh": "2024-01-15T10:30:00Z"
-}
-```
 
-### Price Events
-```
-GET /events
-Query params: since (ISO timestamp), limit
-Response: { "events": [{ "listing_id": "...", "old_price": 400, "new_price": 350, ... }] }
+- `GET /analytics/summary`
 
-POST /webhooks
-Body: { "url": "https://your-endpoint.com/hook" }
-```
+### Refresh
 
----
+- `POST /refresh`
+  - Body: `{ "source": "grailed" }` or omit source for all
 
-## Design Decisions
+### Events / Webhooks
 
-### 1. How does price history scale to millions of rows?
+- `GET /events`
+- `POST /webhooks`
 
-The `price_history` table uses **PostgreSQL range partitioning** by `recorded_at` (monthly partitions). Each month's data lives in a separate physical partition, so queries like "get history for last 30 days" only scan one partition instead of the full table.
+## Complete Work Summary
 
-Additionally, a composite index on `(listing_id, recorded_at DESC)` means fetching a product's history is an index-only scan — O(log n) regardless of table size.
+This implementation includes:
 
-For even larger scale, old partitions can be archived to cheap storage (e.g., S3 via `pg_partman`) with zero changes to application code.
+- user registration and login
+- JWT-based authentication
+- protected frontend routes for dashboard and product pages
+- async database access and schema creation on startup
+- product listing, filtering, and pagination
+- product detail view with historical price chart
+- analytics summary display
+- refresh endpoint for marketplace sources
+- webhook notification support for price changes
 
-### 2. Why event log over webhooks or message queues?
+## Recent fixes
 
-Three options were considered:
+- Backend authentication fixed by pinning `bcrypt<5` for compatibility with `passlib[bcrypt]==1.7.4`
+- Frontend React Query hooks updated to v5 object-style calls
 
-| Approach | Pros | Cons |
-|---|---|---|
-| **Event log (chosen)** | No lost events, queryable, no infra | Requires polling |
-| Pure webhooks | Push-based | Delivery failures = lost events |
-| Redis/Celery queue | True async, scalable | Adds infrastructure complexity for a placement project |
-
-The event log approach means price changes are persisted in `price_events` first — always. Webhook delivery happens asynchronously via FastAPI `BackgroundTasks` with exponential backoff retry (`tenacity`). This satisfies the assignment requirement: "reliable, handle delivery failures, don't block the fetch process."
-
-### 3. How would you extend to 100+ data sources?
-
-The scraper layer uses a **pluggable adapter pattern**:
-
-```python
-class BaseMarketplaceScraper:
-    async def fetch_products(self) -> list[ProductIn]: ...
-
-class GrailedScraper(BaseMarketplaceScraper): ...
-class FashionphileScraper(BaseMarketplaceScraper): ...
-```
-
-Adding a new source = create one new file inheriting `BaseMarketplaceScraper` + register in a `SOURCE_REGISTRY` dict. Zero changes to the refresh API, price detection logic, or database schema.
-
-At 100+ sources, you'd add a task queue (Celery + Redis) to run scrapers in parallel with rate limiting — the adapter interface doesn't change.
-
----
-
-## Known Limitations
-
-- **Mock data only**: Marketplace adapters return realistic simulated data. Real scraping would require handling CAPTCHAs, rate limiting, and HTML parsing — not implemented intentionally.
-- **No OAuth**: JWT is implemented but no refresh token rotation. Production would use short-lived access + long-lived refresh tokens.
-- **Partitioning is pre-configured**: Monthly partitions are created for the current year. A `pg_partman` job would be needed in production to auto-create future partitions.
-- **Single webhook delivery attempt per background task**: Retry logic uses in-process tenacity; a production system would use a persistent job queue.
-- **No pagination on `/events`**: Cursor-based pagination would be added for high-volume consumers.
-
----
-
-## Running Tests
+## Testing
 
 ```bash
 cd backend
 pytest tests/ -v
 ```
 
-Expected: 8+ tests covering auth, products, filtering, price detection edge cases.
+## Ports
 
----
-
-## Ports Used
-- Backend API: `http://localhost:8000`
+- Backend: `http://localhost:8000`
 - Frontend: `http://localhost:5173`
 - PostgreSQL: `localhost:5432`
